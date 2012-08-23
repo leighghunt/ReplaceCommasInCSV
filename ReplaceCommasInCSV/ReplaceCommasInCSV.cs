@@ -93,8 +93,8 @@ namespace ReplaceCommasInCSV
         {
             string usage = "ReplaceCommasInCSV filename [/R replacement string] [/O output filename] /Q\n" +
                 "filename       Input filename\n" +
-                "/R             Replacement string - commas not within quoted strings will be replaced with this string.\n" +
-                "               Optional - if omitted, a pipe ('|') is used.\n" +
+                "/R             Replacement string - commas not within quoted strings will be replaced with this string\n" +
+                "               Optional - if omitted, a pipe ('|') is used\n" +
                 "/O             Output filename - optional, if omitted, original file will be overwritten" +
                 "/Q             Preserve double quotes, if specified, all double quotes will be left in output - default is to strip double quotes from output";
 
