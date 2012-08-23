@@ -13,6 +13,7 @@ namespace ReplaceCommasInCSV
             string replacementString = "|";
             string outputFilename = "";
             bool preserveQuotes = false;
+            bool handleUnmatchedQuotes = false;
             bool argsOK = true;
             
             for(int argIndex = 0; (argIndex < args.Count()) && (argsOK == true); ++ argIndex)
@@ -36,6 +37,9 @@ namespace ReplaceCommasInCSV
                             case "Q":
                                 preserveQuotes = true;
                                 break;
+                            case "U":
+                                handleUnmatchedQuotes = true;
+                                break;                                
                             default:
                                 Console.WriteLine("Unexpected argument flag " + argumentFlag);
                                 argsOK = false;
@@ -72,14 +76,17 @@ namespace ReplaceCommasInCSV
                 outputFilename = inputFilename;
             }
 
+            /*
             Console.WriteLine(string.Format("inputFilename: {0}", inputFilename));
             Console.WriteLine(string.Format("replacementString: {0}", replacementString));
             Console.WriteLine(string.Format("outputFilename: {0}", outputFilename));
             Console.WriteLine(string.Format("preserveQuotes: {0}", preserveQuotes));
+            Console.WriteLine(string.Format("handleUnmatchedQuotes: {0}", handleUnmatchedQuotes));
+            */
 
             if (argsOK)
             {
-                ReplaceCommasInCSV replaceCommasInCSV = new ReplaceCommasInCSV(inputFilename, replacementString, outputFilename, preserveQuotes);
+                ReplaceCommasInCSV replaceCommasInCSV = new ReplaceCommasInCSV(inputFilename, replacementString, outputFilename, preserveQuotes, handleUnmatchedQuotes);
                 replaceCommasInCSV.Replace();
             } 
             else
@@ -93,10 +100,13 @@ namespace ReplaceCommasInCSV
         {
             string usage = "ReplaceCommasInCSV filename [/R replacement string] [/O output filename] /Q\n" +
                 "filename       Input filename\n" +
-                "/R             Replacement string - commas not within quoted strings will be replaced with this string\n" +
-                "               Optional - if omitted, a pipe ('|') is used\n" +
-                "/O             Output filename - optional, if omitted, original file will be overwritten" +
-                "/Q             Preserve double quotes, if specified, all double quotes will be left in output - default is to strip double quotes from output";
+                "/R             Replacement string - commas not within quoted strings will be replaced\n" +
+                "               with this string. Optional - if omitted, a pipe ('|') is used\n" +
+                "/O             Output filename - optional, if omitted, original file will be overwritten\n" +
+                "/Q             Preserve double quotes, if specified, all double quotes will be left in output.\n" +
+                "               Default is to strip double quotes from output\n" +
+                "/U             Handle unmatched quotes. If a newline is encountered inside a string, the \n" +
+                "               newline will be replaced by '\\n'. Default is to not handle, warn user and exit.";
 
             Console.WriteLine(usage);
         }
@@ -109,6 +119,7 @@ namespace ReplaceCommasInCSV
         string _replacementString = "";
         string _outputFilename = "";
         bool _preserveQuotes = true;
+        bool _handleUnmatchedQuotes = false;
         DateTime _started;
 
         public string InputFilename
@@ -159,12 +170,25 @@ namespace ReplaceCommasInCSV
             }
         }
 
-        public ReplaceCommasInCSV(string inputFilename, string replacementString, string outputFilename, bool preserveQuotes)
+        public bool HandleUnmatchedQuotes
+        {
+            get
+            {
+                return this._handleUnmatchedQuotes;
+            }
+            set
+            {
+                this._handleUnmatchedQuotes = value;
+            }
+        }
+
+        public ReplaceCommasInCSV(string inputFilename, string replacementString, string outputFilename, bool preserveQuotes, bool handleUnmatchedQuotes)
         {
             InputFilename = inputFilename;
             ReplacementString = replacementString;
             OutputFilename = outputFilename;
             PreserveQuotes = preserveQuotes;
+            HandleUnmatchedQuotes = handleUnmatchedQuotes;
         }
 
         public bool Replace()
@@ -195,6 +219,8 @@ namespace ReplaceCommasInCSV
                     int linesRead = 0;
                     int commasReplaced = 0;
                     int commasPreserved = 0;
+                    int unmatchedQuotesEncountered = 0;
+                    bool inString = false;
 
                     while (true)
                     {
@@ -207,8 +233,14 @@ namespace ReplaceCommasInCSV
 
                         if (line != null)
                         {
-                            bool inString = false;
-                            lineBuilder.Clear();
+                            if (inString) // We're processing the remaining part from previous line.
+                            {
+
+                            }
+                            else
+                            {
+                                lineBuilder.Clear();
+                            }
 
                             for (int charIndex = 0; charIndex < line.Length; ++charIndex)
                             {
@@ -238,7 +270,28 @@ namespace ReplaceCommasInCSV
                                 }
                             }
 
-                            writer.WriteLine(lineBuilder.ToString());
+                            // Check we didn't have a non-terminated double quote
+                            if (inString)
+                            {
+                                ++unmatchedQuotesEncountered;
+                                if (HandleUnmatchedQuotes)
+                                {
+                                    lineBuilder.Append("\\n");
+                                    // Carry on - we'll handle this in next iteration of while loop
+                                }
+                                else
+                                {
+                                    Console.WriteLine(string.Format("\nERROR - found unmatched double quote in line {0} - EXITING!\n\nTry running with /U switch to concatenate string field values that span multiple lines.\n\nFailing line:\n", linesRead));
+                                    Console.WriteLine(line);
+                                    Console.WriteLine(reader.ReadLine());
+
+                                    return false;
+                                }
+                            }
+                            else
+                            {
+                                writer.WriteLine(lineBuilder.ToString());
+                            }
                         }
                         else
                         {
@@ -253,7 +306,7 @@ namespace ReplaceCommasInCSV
 
                     TimeSpan duration = DateTime.Now - this._started;
 
-                    Console.WriteLine("\nProcessed {0} lines in {1} hrs, {2} mins, {3} secs, commas replaced = {4}, commas preserved = {5}",  linesRead, (int)duration.TotalHours, duration.Minutes, duration.Seconds, commasReplaced, commasPreserved);
+                    Console.WriteLine("\nProcessed {0} lines in {1} hrs, {2} mins, {3} secs, commas replaced = {4}, commas preserved = {5}, unmatched quotes encountered = {6}", linesRead, (int)duration.TotalHours, duration.Minutes, duration.Seconds, commasReplaced, commasPreserved, unmatchedQuotesEncountered);
 
                     // If we write to temp file, now save it.
                     if (OutputFilename != tempOutputFilename)
