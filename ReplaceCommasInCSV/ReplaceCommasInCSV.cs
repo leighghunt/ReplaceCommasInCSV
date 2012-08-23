@@ -12,6 +12,7 @@ namespace ReplaceCommasInCSV
             string inputFilename = "";
             string replacementString = "|";
             string outputFilename = "";
+            bool preserveQuotes = false;
             bool argsOK = true;
             
             for(int argIndex = 0; (argIndex < args.Count()) && (argsOK == true); ++ argIndex)
@@ -20,8 +21,6 @@ namespace ReplaceCommasInCSV
 
                 if (argument.StartsWith("/") || argument.StartsWith("-"))
                 {
-                    ++argIndex;
-
                     string argumentFlag = argument.Substring(1, argument.Length - 1);
 
                     if (argIndex < args.Count())
@@ -29,10 +28,13 @@ namespace ReplaceCommasInCSV
                         switch (argumentFlag.ToUpper())
                         {
                             case "R":
-                                replacementString = args[argIndex];
+                                replacementString = args[++argIndex];
                                 break;
                             case "O":
-                                outputFilename = args[argIndex];
+                                outputFilename = args[++argIndex];
+                                break;
+                            case "Q":
+                                preserveQuotes = true;
                                 break;
                             default:
                                 Console.WriteLine("Unexpected argument flag " + argumentFlag);
@@ -73,10 +75,11 @@ namespace ReplaceCommasInCSV
             Console.WriteLine(string.Format("inputFilename: {0}", inputFilename));
             Console.WriteLine(string.Format("replacementString: {0}", replacementString));
             Console.WriteLine(string.Format("outputFilename: {0}", outputFilename));
+            Console.WriteLine(string.Format("preserveQuotes: {0}", preserveQuotes));
 
             if (argsOK)
             {
-                ReplaceCommasInCSV replaceCommasInCSV = new ReplaceCommasInCSV(inputFilename, replacementString, outputFilename);
+                ReplaceCommasInCSV replaceCommasInCSV = new ReplaceCommasInCSV(inputFilename, replacementString, outputFilename, preserveQuotes);
                 replaceCommasInCSV.Replace();
             } 
             else
@@ -88,11 +91,12 @@ namespace ReplaceCommasInCSV
 
         static private void Usage()
         {
-            string usage = "ReplaceCommasInCSV filename [/R replacement string] [/O output filename]\n" +
+            string usage = "ReplaceCommasInCSV filename [/R replacement string] [/O output filename] /Q\n" +
                 "filename       Input filename\n" +
-                "R              Replacement string - commas not within quoted strings will be replaced with this string.\n" +
+                "/R             Replacement string - commas not within quoted strings will be replaced with this string.\n" +
                 "               Optional - if omitted, a pipe ('|') is used.\n" +
-                "O              Output filename - optional, if omitted, original file will be overwritten";
+                "/O             Output filename - optional, if omitted, original file will be overwritten" +
+                "/Q             Preserve double quotes, if specified, all double quotes will be left in output - default is to strip double quotes from output";
 
             Console.WriteLine(usage);
         }
@@ -101,10 +105,10 @@ namespace ReplaceCommasInCSV
     class ReplaceCommasInCSV
     {
         const int _indicateProgressAfter = 1000; // Number of lines read between indication of progress.
-        const int _flushAfter = 100000; // Number of lines written between writer flushes.
         string _inputFilename = "";
         string _replacementString = "";
         string _outputFilename = "";
+        bool _preserveQuotes = true;
         DateTime _started;
 
         public string InputFilename
@@ -143,11 +147,24 @@ namespace ReplaceCommasInCSV
             }
         }
 
-        public ReplaceCommasInCSV(string inputFilename, string replacementString, string outputFilename)
+        public bool PreserveQuotes
+        {
+            get
+            {
+                return this._preserveQuotes;
+            }
+            set
+            {
+                this._preserveQuotes = value;
+            }
+        }
+
+        public ReplaceCommasInCSV(string inputFilename, string replacementString, string outputFilename, bool preserveQuotes)
         {
             InputFilename = inputFilename;
             ReplacementString = replacementString;
             OutputFilename = outputFilename;
+            PreserveQuotes = preserveQuotes;
         }
 
         public bool Replace()
@@ -188,12 +205,6 @@ namespace ReplaceCommasInCSV
                             Console.Write(".");
                         }
 
-                        if (linesRead % ReplaceCommasInCSV._flushAfter == 0)
-                        {
-                            Console.Write("F");
-                            writer.Flush();
-                        }
-
                         if (line != null)
                         {
                             bool inString = false;
@@ -204,6 +215,12 @@ namespace ReplaceCommasInCSV
                                 if (line[charIndex] == '"')
                                 {
                                     inString = !inString;
+
+                                    if (!PreserveQuotes)
+                                    {
+                                        // Log if we're changing string state, but skip adding the quote into the output.
+                                        continue;
+                                    }
                                 }
 
                                 if (!inString && line[charIndex] == ',')
@@ -234,6 +251,10 @@ namespace ReplaceCommasInCSV
                     Console.WriteLine("Closing writer...");
                     writer.Close();
 
+                    TimeSpan duration = DateTime.Now - this._started;
+
+                    Console.WriteLine("\nProcessed {0} lines in {1} hrs, {2} mins, {3} secs, commas replaced = {4}, commas preserved = {5}",  linesRead, (int)duration.TotalHours, duration.Minutes, duration.Seconds, commasReplaced, commasPreserved);
+
                     // If we write to temp file, now save it.
                     if (OutputFilename != tempOutputFilename)
                     {
@@ -242,10 +263,6 @@ namespace ReplaceCommasInCSV
                         Console.WriteLine("Deleting temporary file...");
                         System.IO.File.Delete(tempOutputFilename);
                     }
-
-                    TimeSpan duration = DateTime.Now - this._started;
-
-                    Console.WriteLine("\nProcessed {0} lines in {1} hrs, {2} mins, {3} secs, commas replaced = {4}, commas preserved = {5}",  linesRead, (int)duration.TotalHours, duration.Minutes, duration.Seconds, commasReplaced, commasPreserved);
                 }
 
                 return true;
