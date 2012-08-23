@@ -106,7 +106,7 @@ namespace ReplaceCommasInCSV
                 "/Q             Preserve double quotes, if specified, all double quotes will be left in output.\n" +
                 "               Default is to strip double quotes from output\n" +
                 "/U             Handle unmatched quotes. If a newline is encountered inside a string, the \n" +
-                "               newline will be replaced by '\\n'. Default is to not handle, warn user and exit.";
+                "               newline will be replaced by '\\n'. Default is to not handle, warn user and exit";
 
             Console.WriteLine(usage);
         }
