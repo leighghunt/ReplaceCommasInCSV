@@ -211,28 +211,46 @@ namespace ReplaceCommasInCSV
                     Console.WriteLine(string.Format("Opening file {0}...", InputFilename));
                     Console.WriteLine(string.Format("Writing to {0}...", tempOutputFilename));
 
+                    System.IO.FileInfo fileInfo = new System.IO.FileInfo(InputFilename);
                     System.IO.TextReader reader = System.IO.File.OpenText(InputFilename);
                     System.IO.StreamWriter writer = new System.IO.StreamWriter(tempOutputFilename);
                     
                     //System.IO.StringWriter writer ;
                     StringBuilder lineBuilder = new StringBuilder();
-                    int linesRead = 0;
-                    int commasReplaced = 0;
-                    int commasPreserved = 0;
-                    int unmatchedQuotesEncountered = 0;
+                    long linesRead = 0;
+                    long charsRead = 0;
+                    long commasReplaced = 0;
+                    long commasPreserved = 0;
+                    long unmatchedQuotesEncountered = 0;
                     bool inString = false;
+                    long totalChars = fileInfo.Length;
+
+                    string ETA = "estimating...";
 
                     while (true)
                     {
                         string line = reader.ReadLine();
                         ++linesRead;
-                        if (linesRead % ReplaceCommasInCSV._indicateProgressAfter == 0)
-                        {
-                            Console.Write(".");
-                        }
 
                         if (line != null)
                         {
+                            charsRead += line.Length;
+                            if (linesRead % (ReplaceCommasInCSV._indicateProgressAfter * 100) == 0)
+                            {
+                                TimeSpan durationSoFar = DateTime.Now - this._started;
+                                double charsPerMillisecond = charsRead / durationSoFar.TotalMilliseconds;
+                                DateTime projectedEndTime = DateTime.Now.AddMilliseconds(((totalChars - charsRead) / charsPerMillisecond));
+                                TimeSpan projectedTimeLeft = projectedEndTime - DateTime.Now;
+                                ETA = string.Format("{0} hrs, {1} mins, {2} secs     ", (int)projectedTimeLeft.TotalHours, projectedTimeLeft.Minutes, projectedTimeLeft.Seconds);
+                            }
+
+                            if (linesRead % ReplaceCommasInCSV._indicateProgressAfter == 0)
+                            {
+                                //Console.Write(".");
+                                Console.SetCursorPosition(0, Console.CursorTop);
+                                Console.Write(string.Format("{0:#}% complete, {1:#,###} lines processed. ETA {2}", (charsRead * 100) / totalChars, linesRead, ETA));
+                            }
+
                             if (inString) // We're processing the remaining part from previous line.
                             {
 
