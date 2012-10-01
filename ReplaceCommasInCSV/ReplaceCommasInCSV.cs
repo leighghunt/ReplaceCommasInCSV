@@ -99,14 +99,17 @@ namespace ReplaceCommasInCSV
         static private void Usage()
         {
             string usage = "ReplaceCommasInCSV filename [/R replacement string] [/O output filename] /Q\n" +
-                "filename       Input filename\n" +
-                "/R             Replacement string - commas not within quoted strings will be replaced\n" +
-                "               with this string. Optional - if omitted, a pipe ('|') is used\n" +
-                "/O             Output filename - optional, if omitted, original file will be overwritten\n" +
-                "/Q             Preserve double quotes, if specified, all double quotes will be left in output.\n" +
-                "               Default is to strip double quotes from output\n" +
-                "/U             Handle unmatched quotes. If a newline is encountered inside a string, the \n" +
-                "               newline will be replaced by '\\n'. Default is to not handle, warn user and exit";
+                "filename   Input filename\n" +
+                "/R         Replacement string - commas not within quoted strings will be\n" +
+                "           replaced with this string.\n" +
+                "           Optional - if omitted, a pipe ('|') is used\n" +
+                "/O         Output filename - optional, if omitted, original file will be \n" +
+                "           overwritten\n" +
+                "/Q         Preserve double quotes, if specified, all double quotes will\n" +
+                "           be left in output. Default is to strip double quotes from output\n" +
+                "/U         Handle unmatched quotes. If a newline is encountered inside a\n" +
+                "           string, the newline will be replaced by '\\n'. \n" +
+                "           Default is to not handle, warn user and exit";
 
             Console.WriteLine(usage);
         }
