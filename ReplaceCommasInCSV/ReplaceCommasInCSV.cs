@@ -39,7 +39,10 @@ namespace ReplaceCommasInCSV
                                 break;
                             case "U":
                                 handleUnmatchedQuotes = true;
-                                break;                                
+                                break;                      
+                            case "V":
+                                VersionString();                                
+                                return; // Exit application after printing version.
                             default:
                                 Console.WriteLine("Unexpected argument flag " + argumentFlag);
                                 argsOK = false;
@@ -102,16 +105,42 @@ namespace ReplaceCommasInCSV
                 "filename   Input filename\n" +
                 "/R         Replacement string - commas not within quoted strings will be\n" +
                 "           replaced with this string.\n" +
-                "           Optional - if omitted, a pipe ('|') is used\n" +
-                "/O         Output filename - optional, if omitted, original file will be \n" +
-                "           overwritten\n" +
+                "           Optional - if omitted, a pipe ('|') is used.\n" +
+                "/O         Output filename - optional, if omitted, original file will be\n" +
+                "           overwritten.\n" +
                 "/Q         Preserve double quotes, if specified, all double quotes will\n" +
-                "           be left in output. Default is to strip double quotes from output\n" +
+                "           be left in output. Default is to strip double quotes from output.\n" +
                 "/U         Handle unmatched quotes. If a newline is encountered inside a\n" +
                 "           string, the newline will be replaced by '\\n'. \n" +
-                "           Default is to not handle, warn user and exit";
+                "           Default is to not handle, warn user and exit.\n" +
+                "/V         Prints out Version information.";
 
             Console.WriteLine(usage);
+        }
+
+        static private void VersionString()
+        {
+            System.Reflection.AssemblyName assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName();
+
+            //Build date - from http://dotnetfreak.co.uk/blog/archive/2004/07/08/determining-the-build-date-of-an-assembly.aspx
+
+            // Build dates start from 01/01/2000
+            DateTime buildDate = new DateTime(2000, 1, 1);
+            // Retrieve the version information from the assembly from which this code is being executed
+            //Add the number of days (build)
+            buildDate = buildDate.AddDays(assemblyName.Version.Build);
+
+            //Add the number of seconds since midnight (revision) multiplied by 2
+            buildDate = buildDate.AddSeconds(assemblyName.Version.Revision * 2);
+            /* Not actually worried about DST, and bit below doesn't quite seem right
+            // If we're currently in daylight saving time add an extra hour
+            if (TimeZone.IsDaylightSavingTime(DateTime.Now, TimeZone.CurrentTimeZone.GetDaylightChanges(DateTime.Now.Year)))
+            {
+                buildDate = buildDate.AddHours(1);
+            }
+            */
+
+            Console.WriteLine(string.Format("{0} v{1} {2}", assemblyName.Name, assemblyName.Version.ToString(), buildDate.ToString()));
         }
     }
 
